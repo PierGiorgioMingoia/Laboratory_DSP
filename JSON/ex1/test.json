@@ -1,0 +1,27 @@
+{
+    "$schema": "./refactor.json",
+    "bibliography": [
+        {
+            "title": "A",
+            "authors": [
+                "Sal Marcano"
+            ],
+            "kind": "Article",
+            "Issue": {
+                "number": "",
+                "year": ""
+            },
+            "Journal": {
+                "title": "",
+                "publisher": "",
+                "ISSN": "",
+                "Issues": [
+                    {
+                        "number": "",
+                        "year": ""
+                    }
+                ]
+            }
+        }
+    ]
+}

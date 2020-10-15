@@ -1,0 +1,7 @@
+{
+    "type":"object",
+    "properties":{
+        "city":{"type":"string"},
+        "street":{"type":"string"}
+    }
+}

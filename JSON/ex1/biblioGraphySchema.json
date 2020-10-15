@@ -1,0 +1,143 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "definitions": {
+        "biblioItem": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "subtitle": {
+                    "type": "string"
+                },
+                "authors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "minItems": 1
+                    }
+                },
+                "citedBy": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "kind": {
+                    "enum": [
+                        "Book",
+                        "Article"
+                    ]
+                }
+            },
+            "required": [
+                "title",
+                "authors",
+                "id",
+                "kind"
+            ],
+            "if": {
+                "properties": {
+                    "kind": {
+                        "const": "Book"
+                    }
+                }
+            },
+            "then": {
+                "allOf": [
+                    {
+                        "$ref": "#definitions/book"
+                    }
+                ]
+            },
+            "else": {
+                "allOf": [
+                    {
+                        "$ref": "#definitions/article"
+                    }
+                ]
+            }
+        },
+        "book": {
+            "type": "object",
+            "properties": {
+                "ISBN": {
+                    "type": "string"
+                },
+                "publisher": {
+                    "type": "string"
+                },
+                "year": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "ISBN",
+                "publisher",
+                "year"
+            ]
+        },
+        "article": {
+            "type": "object",
+            "properties": {
+                "Journal": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string"
+                        },
+                        "publisher": {
+                            "type": "string"
+                        },
+                        "ISSN": {
+                            "type": "string"
+                        },
+                        "Issues": {
+                            "type": "array"
+                        }
+                    },
+                    "required": [
+                        "title",
+                        "publisher",
+                        "ISSN"
+                    ]
+                },
+                "Issue": {
+                    "type": "object",
+                    "properties": {
+                        "year": {
+                            "type": "string"
+                        },
+                        "number": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "year",
+                        "number"
+                    ]
+                }
+            },
+            "required": [
+                "Journal",
+                "Issue"
+            ]
+        }
+    },
+    "type": "object",
+    "propreties": {
+        "items": {
+            "type": "array",
+            "items": {
+                "$ref": "#definitions/item"
+            },
+            "minLength": 1
+        }
+    },
+    "required": [
+        "items"
+    ]
+}

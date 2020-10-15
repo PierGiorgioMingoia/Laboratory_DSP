@@ -1,0 +1,7 @@
+{
+    "$schema": "./ex2.json",
+
+    "billingAddress":{"vat": "asdasd"},
+    "lista": []
+
+}
