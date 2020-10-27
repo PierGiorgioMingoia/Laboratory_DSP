@@ -1,8 +1,12 @@
 {
-    "$schema":"./task.json",
+    "$schema": "./task.json",
     "id": 1,
     "description": "Pulizie",
-    "projects": ["DSP_Project"],
-    "assignedTo": [221,32,12],
+    "project": "DSP_Project",
+    "assignedTo": [
+        221,
+        32,
+        12
+    ],
     "date": "2020-01-01"
 }

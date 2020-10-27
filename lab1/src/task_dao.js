@@ -5,13 +5,6 @@ const db = require('./db');
 const moment = require('moment');
 
 
-const createTask = function (row) {
-    const importantTask = (row.important === 1) ? true : false;
-    const privateTask = (row.private === 1) ? true : false;
-    const completedTask = (row.completed === 1) ? true : false;
-    return new Task(row.tid, row.description, importantTask, privateTask, row.deadline, row.project, completedTask, row.email);
-}
-
 const getTaskUsers = function (task_id) {
     return new Promise((resolve, reject) => {
         const sql = "SELECT user FROM assignments where task = ? "
@@ -52,12 +45,13 @@ exports.getPublicTasks = function () {
 }
 
 
+
 exports.getTasks = function (user) {
     return new Promise((resolve, reject) => {
-        const sql = "SELECT * WHERE user = ?";
+        const sql = "SELECT  T.id, T.description, T.important, T.private, T.project, T.deadline, T.completed FROM assignments as A, tasks as T WHERE T.id = A.task AND A.user =?"
         db.all(sql, [user], (err, rows) => {
             if (err) {
-                reject(err);
+                reject(err)
             } else {
                 let tasks = rows.map((row) => new Task(row));
                 const promises = tasks.map((t) => {
@@ -71,7 +65,7 @@ exports.getTasks = function (user) {
                 })
             }
         });
-    });
+    })
 }
 
 /**
@@ -86,7 +80,7 @@ exports.getTask = function (id) {
             else if (rows.length === 0)
                 resolve(undefined);
             else {
-                const task = createTask(rows[0]);
+                const task = new Task(rows[0]);
                 getTaskUsers(task.id).then((users) => {
                     task.assignedTo = [...users];
                     resolve(task);
@@ -106,26 +100,31 @@ exports.deleteTask = function (id) {
         db.run(sql, [id], (err) => {
             if (err)
                 reject(err);
-            else
+            else {
+                deleteAssignedUsers(id);
                 resolve(null);
+            }
         })
     });
 }
 
 exports.createTask = function (task) {
+    console.log(task.important)
     if (task.deadline) {
         task.deadline = moment(task.deadline).format("YYYY-MM-DD HH:mm");
     }
     return new Promise((resolve, reject) => {
-        const sql = 'INSERT INTO tasks(description, important, private, project, deadline, completed) VALUES(?,?,?,?,?,?,?)';
-        db.run(sql, [task.description, task.important, task.privateTask, task.project, task.deadline, task.completed], function (err) {
+        const sql = 'INSERT INTO tasks(description, important, private, project, deadline, completed) VALUES(?,?,?,?,?,?)';
+        db.run(sql, [task.description, task.important, task.private, task.project, task.deadline, task.completed], function (err) {
             if (err) {
                 console.log(err);
                 reject(err);
             }
             else {
                 console.log(this.lastID);
-                saveAssigendUsers(task.assignedTo, this.lastID)
+                if (task.assignedTo && task.assignedTo.length > 0) {
+                    saveAssigendUsers(task.assignedTo, this.lastID)
+                }
                 resolve(this.lastID);
             }
         });
@@ -136,5 +135,30 @@ const saveAssigendUsers = (users, task_id) => {
     users.forEach(user => {
         const sql = 'INSERT INTO assignments(task,user) VALUES(?,?)'
         db.run(sql, [task_id, user]);
+    });
+}
+
+const deleteAssignedUsers = (task_id) => {
+    const sql = 'DELETE FROM assignments WHERE task = ?'
+    db.run(sql, [task_id])
+}
+
+exports.updateTask = function (id, newTask) {
+    if (newTask.deadline) {
+        newTask.deadline = moment(newTask.deadline).format("YYYY-MM-DD HH:mm");
+    }
+    deleteAssignedUsers(id);
+    return new Promise((resolve, reject) => {
+        const sql = 'UPDATE tasks SET description = ?, important = ?, private = ?, project = ?, deadline = ?, completed = ? WHERE id = ?';
+        db.run(sql, [newTask.description, newTask.important, newTask.private, newTask.project, newTask.deadline, newTask.completed, id], (err) => {
+            if (err) {
+                console.log(err);
+                reject(err);
+            }
+            else {
+                saveAssigendUsers(newTask.assignedTo, id);
+                resolve(null);
+            }
+        })
     });
 }

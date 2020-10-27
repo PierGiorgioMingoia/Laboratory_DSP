@@ -20,22 +20,15 @@ const app = express();
 const port = 3001;
 
 //schema validator
-const validate = require('jsonschema').validate;
+const Ajv = require('ajv');
 const task_schema = require('./json/task.json')
 const user_schema = require('./json/user.json')
 
 const test = require("./json/test.json")
 
-function validate_json(json_data, schema) {
-    const val = validate(json_data, schema)
-    return val.errors.length == 0 ? true : false
-}
 
-try {
-    validate(test, task_schema, { "throwError": true })
-} catch (error) {
-    console.log(error)
-}
+const ajv = new Ajv({ useDefaults: true });
+const validate = ajv.compile(task_schema)
 
 
 /*Error obj*/
@@ -116,7 +109,7 @@ app.use(
 
 // Provide an endpoint for the App to retrieve the CSRF token
 app.get('/api/csrf-token', csfrProtection, (req, res) => {
-    console.log(req.csrfToken() );
+    console.log(req.csrfToken());
     res.json({ csrfToken: req.csrfToken() });
 });
 
@@ -129,7 +122,7 @@ app.use(function (err, req, res, next) {
 
 
 //GET /tasks/<taskId>
-app.get('/tasks/:taskId', (req, res) => {  
+app.get('/tasks/:taskId', (req, res) => {
     taskDao.getTask(req.params.taskId)
         .then((course) => {
             if (!course) {
@@ -145,13 +138,30 @@ app.get('/tasks/:taskId', (req, res) => {
         });
 });
 
+//GET /tasks
+app.get('/tasksuser', (req, res) => {
+    const user = req.user && req.user.user;
+    console.log(user)
+    taskDao.getTasks(user)
+        .then((tasks) => {
+            res.json(tasks);
+        })
+        .catch((err) => {
+            res.status(500).json({
+                errors: [{'msg': err}],
+             });
+       });
+});
+
+
 
 //POST /tasks
 app.post('/tasks', (req, res) => {
     const task = req.body;
-    if (!task || !validate_json(task, task_schema)) {
+    if (!task || !validate(task)) {
         res.status(400).end();
     } else {
+        console.log(task);
         const user = req.user && req.user.user;
         task.user = user;
         taskDao.createTask(task)
@@ -178,7 +188,9 @@ app.put('/tasks/:taskId', (req, res) => {
         res.status(400).end();
     } else {
         const task = req.body;
-        if (!task || !validate_json(task, task_schema)) {
+        if (!task || !validate(task)) {
+            let er = validate.errors;
+
             res.status(400).end();
         } else {
             const user = req.user && req.user.user;
