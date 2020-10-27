@@ -5,6 +5,7 @@ const morgan = require('morgan'); // logging middleware
 const jwt = require('express-jwt');
 const jsonwebtoken = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
+const csrf = require('csurf');
 const jwtSecret = '6xvL4xkAAbG49hcXf5GIYSvkDICiUAR6EdR5dLdwW7hMzUjjMUe9t6M5kSAYxsvX';
 const expireTime = 300; //seconds
 
@@ -35,6 +36,11 @@ try {
 } catch (error) {
     console.log(error)
 }
+
+
+/*Error obj*/
+const dbError = { errors: [{ 'param': 'Server', 'msg': 'Database error' }] };
+const authError = { errors: [{ 'param': 'Server', 'msg': 'Authorization error' }] };
 
 // Set-up logging
 app.use(morgan('tiny'));
@@ -77,6 +83,9 @@ app.post('/login', (req, res) => {
 });
 
 app.use(cookieParser());
+const csfrProtection = csrf({
+    cookie: { httpOnly: true, sameSite: true }
+});
 
 app.post('/logout', (req, res) => {
     res.clearCookie('token').end();
@@ -105,10 +114,22 @@ app.use(
     })
 );
 
+// Provide an endpoint for the App to retrieve the CSRF token
+app.get('/api/csrf-token', csfrProtection, (req, res) => {
+    console.log(req.csrfToken() );
+    res.json({ csrfToken: req.csrfToken() });
+});
+
+// To return a better object in case of errors
+app.use(function (err, req, res, next) {
+    if (err.name === 'UnauthorizedError') {
+        res.status(401).json(authError);
+    }
+});
+
 
 //GET /tasks/<taskId>
-app.get('/tasks/:taskId', (req, res) => {
-    console.log(req.params)
+app.get('/tasks/:taskId', (req, res) => {  
     taskDao.getTask(req.params.taskId)
         .then((course) => {
             if (!course) {
@@ -149,6 +170,26 @@ app.delete('/tasks/:taskId', (req, res) => {
         .catch((err) => res.status(500).json({
             errors: [{ 'param': 'Server', 'msg': err }],
         }));
+});
+
+//PUT /tasks/<taskId>
+app.put('/tasks/:taskId', (req, res) => {
+    if (!req.body.id) {
+        res.status(400).end();
+    } else {
+        const task = req.body;
+        if (!task || !validate_json(task, task_schema)) {
+            res.status(400).end();
+        } else {
+            const user = req.user && req.user.user;
+            task.user = user;
+            taskDao.updateTask(req.params.taskId, task)
+                .then((result) => res.status(200).end())
+                .catch((err) => res.status(500).json({
+                    errors: [{ 'param': 'Server', 'msg': err }],
+                }));
+        }
+    }
 });
 
 app.listen(port, () => console.log('Server ready'));

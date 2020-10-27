@@ -12,15 +12,40 @@ const createTask = function (row) {
     return new Task(row.tid, row.description, importantTask, privateTask, row.deadline, row.project, completedTask, row.email);
 }
 
+const getTaskUsers = function (task_id) {
+    return new Promise((resolve, reject) => {
+        const sql = "SELECT user FROM assignments where task = ? "
+        db.all(sql, [task_id], (err, rows) => {
+            if (err) {
+                reject(err)
+            } else {
+                let assignedTo = rows.map(row => row.user)
+                resolve(assignedTo);
+            }
+        });
+    })
+
+
+}
+
 exports.getPublicTasks = function () {
     return new Promise((resolve, reject) => {
         const sql = "SELECT * FROM tasks WHERE private = 0";
-        db.all(sql, [], (err, rows) => {
+        db.all(sql, [], async (err, rows) => {
             if (err) {
                 reject(err);
             } else {
-                let tasks = rows.map((row) => createTask(row));
-                resolve(tasks);
+                let tasks = rows.map((row) => new Task(row));
+                const promises = tasks.map((t) => {
+                    return getTaskUsers(t.id).then((users) => {
+                        t.assignedTo = [...users];
+                        return t;
+                    });
+                });
+                Promise.all(promises).then((result) => {
+                    resolve(result);
+                })
+
             }
         });
     });
@@ -34,8 +59,16 @@ exports.getTasks = function (user) {
             if (err) {
                 reject(err);
             } else {
-                let tasks = rows.map((row) => createTask(row));
-                resolve(tasks);
+                let tasks = rows.map((row) => new Task(row));
+                const promises = tasks.map((t) => {
+                    return getTaskUsers(t.id).then((users) => {
+                        t.assignedTo = [...users];
+                        return t;
+                    });
+                });
+                Promise.all(promises).then((result) => {
+                    resolve(result);
+                })
             }
         });
     });
@@ -54,7 +87,10 @@ exports.getTask = function (id) {
                 resolve(undefined);
             else {
                 const task = createTask(rows[0]);
-                resolve(task);
+                getTaskUsers(task.id).then((users) => {
+                    task.assignedTo = [...users];
+                    resolve(task);
+                })
             }
         });
     });
@@ -81,16 +117,24 @@ exports.createTask = function (task) {
         task.deadline = moment(task.deadline).format("YYYY-MM-DD HH:mm");
     }
     return new Promise((resolve, reject) => {
-        const sql = 'INSERT INTO tasks(description, important, private, project, deadline, completed, user) VALUES(?,?,?,?,?,?,?)';
-        db.run(sql, [task.description, task.important, task.privateTask, task.project, task.deadline, task.completed, task.user], function (err) {
+        const sql = 'INSERT INTO tasks(description, important, private, project, deadline, completed) VALUES(?,?,?,?,?,?,?)';
+        db.run(sql, [task.description, task.important, task.privateTask, task.project, task.deadline, task.completed], function (err) {
             if (err) {
                 console.log(err);
                 reject(err);
             }
             else {
                 console.log(this.lastID);
+                saveAssigendUsers(task.assignedTo, this.lastID)
                 resolve(this.lastID);
             }
         });
+    });
+}
+
+const saveAssigendUsers = (users, task_id) => {
+    users.forEach(user => {
+        const sql = 'INSERT INTO assignments(task,user) VALUES(?,?)'
+        db.run(sql, [task_id, user]);
     });
 }

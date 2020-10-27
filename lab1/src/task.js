@@ -1,19 +1,13 @@
 class Task{    
-    constructor(id, description, important, privateTask, deadline, project, completed, user) {
-        if(id)
-            this.id = id;
-
-        this.description = description;
-        this.important = important;
-        this.privateTask = privateTask;
-
-        if(deadline)
-            this.deadline = deadline;
-        if(project)
-            this.project = project;
-
-        this.completed = completed || false;
-        this.user = user;
+    constructor(row) {
+        this.id = row.id;
+        this.description =row.description
+        this.important = row.important
+        this.private = row.private
+        this.project = row.project
+        this.deadline = row.deadline
+        this.completed = row.completed
+        this.assignedTo = []
     }
 }
 
