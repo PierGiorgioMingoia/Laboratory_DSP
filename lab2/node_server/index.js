@@ -8,23 +8,30 @@ const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
 const jwtSecret = '6xvL4xkAAbG49hcXf5GIYSvkDICiUAR6EdR5dLdwW7hMzUjjMUe9t6M5kSAYxsvX';
 const expireTime = 300; //seconds
+const path = require('path');
+const fs = require('fs');
 
 
 
 //lab 2
-const multer = require('multer')  
+const grp = require('./src/grpcService');
+
+
+var dir = path.join(__dirname, 'uploads');
+
+const multer = require('multer')
 const storage = multer.diskStorage({
-    destination: function(req, file, cb) {
+    destination: function (req, file, cb) {
         cb(null, 'uploads/');
     },
 
     // By default, multer removes file extensions so let's add them back
-    filename: function(req, file, cb) {
+    filename: function (req, file, cb) {
         cb(null, file.originalname);
     }
 });
 
-const imageFilter = function(req, file, cb) {
+const imageFilter = function (req, file, cb) {
     // Accept images only
     if (!file.originalname.match(/\.(jpg|JPG|jpeg|JPEG|png|PNG|gif|GIF)$/)) {
         req.fileValidationError = 'Only image files are allowed!';
@@ -124,14 +131,15 @@ app.get('/tasks', (req, res) => {
 });
 
 
-
-app.post('/image', upload, (req, res) =>{
-    if(!req.file){
-        console.log("No file recived");
+// lab 2
+app.post('/image', upload, (req, res) => {
+    // TODO save image/task in the DB
+    if (!req.file) {
+        console.log("No File recived");
         return res.send({
             success: false,
         });
-    }else{
+    } else {
         console.log("File recived");
         return res.send({
             success: true,
@@ -139,6 +147,29 @@ app.post('/image', upload, (req, res) =>{
     }
 });
 
+var mime = {
+    html: 'text/html',
+    txt: 'text/plain',
+    css: 'text/css',
+    gif: 'image/gif',
+    jpg: 'image/jpeg',
+    png: 'image/png',
+    svg: 'image/svg+xml',
+    js: 'application/javascript'
+};
+
+
+
+app.get('/image/:taskId/:imageId', (req, res) => {
+    //TODO check if format is avaiable
+    console.log(req.body)
+    grp.getImageOfTask(req).then((image) => {
+        console.log('BOOMES');
+    }).catch((err)=>{
+        console.log(err);
+    })
+   
+});
 
 // For the rest of the code, all APIs require authentication
 
@@ -191,9 +222,9 @@ app.get('/tasksuser', (req, res) => {
         })
         .catch((err) => {
             res.status(500).json({
-                errors: [{'msg': err}],
-             });
-       });
+                errors: [{ 'msg': err }],
+            });
+        });
 });
 
 
