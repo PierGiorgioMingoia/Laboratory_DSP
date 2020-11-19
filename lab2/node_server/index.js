@@ -15,10 +15,7 @@ const fs = require('fs');
 
 //lab 2
 const grp = require('./src/grpcService');
-
-
 var dir = path.join(__dirname, 'uploads');
-
 const multer = require('multer')
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -42,11 +39,11 @@ const imageFilter = function (req, file, cb) {
 
 
 let upload = multer({ storage: storage, fileFilter: imageFilter }).single('images');
-//const imageDataStream = fs.createReadStream(pathOriginFile, {highWaterMark: max_chunk_size}); Default chunk size: 665536
 
 //src
 const userDao = require('./src/user_dao');
 const taskDao = require('./src/task_dao');
+const imageDao = require('./src/image_dao');
 
 //create application
 const app = express();
@@ -132,7 +129,7 @@ app.get('/tasks', (req, res) => {
 
 
 // lab 2
-app.post('/image', upload, (req, res) => {
+app.post('/image/:taskId', upload, (req, res) => {
     // TODO save image/task in the DB
     if (!req.file) {
         console.log("No File recived");
@@ -140,36 +137,51 @@ app.post('/image', upload, (req, res) => {
             success: false,
         });
     } else {
-        console.log("File recived");
-        return res.send({
-            success: true,
-        })
+        console.log("File recived", req.file.mimetype);
+        imageDao.createImage({ filename: req.file.filename, type: req.file.mimetype.split('/')[0], taskId: req.params.taskId }).then((id) => {
+            res.send({
+                success: true,
+                imageId: id
+            })
+        }).catch((err) => {
+            res.send({
+                success: false,
+            });
+        });
+
+
     }
 });
 
-var mime = {
-    html: 'text/html',
-    txt: 'text/plain',
-    css: 'text/css',
-    gif: 'image/gif',
-    jpg: 'image/jpeg',
-    png: 'image/png',
-    svg: 'image/svg+xml',
-    js: 'application/javascript'
-};
+app.delete('/image/:taskId/:imageId', (req, res) => {
 
+    const image = { id: req.params.imageId, taskId: req.params.taskId }
+
+    imageDao.deleteImage(image).then(() => {
+        res.send({
+            success: true,
+        });
+    }).catch((err) => {
+        res.send({
+            success: false,
+        });
+    });
+});
 
 
 app.get('/image/:taskId/:imageId', (req, res) => {
     //TODO check if format is avaiable
     console.log(req.body)
     grp.getImageOfTask(req).then((image) => {
-        console.log('BOOMES');
-    }).catch((err)=>{
+        res.sendFile(image.fileName, { root: image.rootName });
+    }).catch((err) => {
         console.log(err);
     })
-   
 });
+
+
+
+
 
 // For the rest of the code, all APIs require authentication
 
