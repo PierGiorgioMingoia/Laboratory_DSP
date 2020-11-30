@@ -3,6 +3,7 @@
 var utils = require('../utils/writer.js');
 var constants = require('../utils/constants.js');
 var Tasks = require('../service/TasksService.js');
+var webSocketFunctions = require('../index.js')
 const Task = require('../components/task.js');
 
 module.exports.addTask = function addTask(req, res, next) {
@@ -143,7 +144,15 @@ module.exports.updateTaskActiveStatus = function updateTaskActiveStatus(req, res
             if (response == "Not_Found") {
                 utils.writeJson(res, { errors: [{ 'param': 'Server', 'msg': response }], }, 404);
             } else {
-                utils.writeJson(res, {success: 'true'}, 200);
+                utils.writeJson(res, { success: 'true' }, 200);
+                Tasks.getUserActiveTask(response).then(
+                    (task) => {
+                        let tmp = { userId: response }
+                        if (task.tid && task.description) {
+                            tmp = { userId: response, taskId: task.tid, taskName: task.description }
+                        }
+                        webSocketFunctions.updateActiveSatus(tmp);
+                    }).catch(error => console.log(error));
             }
         }).catch(function (response) {
             utils.writeJson(res, { errors: [{ 'param': 'Server', 'msg': response }], }, 500);

@@ -241,7 +241,7 @@ const deactivateUserTask = function (userId, taskId) {
 
 exports.updateTaskActiveStatus = function (userId, taskId, active) {
     return new Promise((resolve, reject) => {
-        console.log(active,userId, taskId)
+        console.log(active, userId, taskId)
         var sql = 'UPDATE assignments SET active = ? WHERE user = ? AND task = ?';
         db.run(sql, [active, userId, taskId], function (err) {
             if (err) {
@@ -251,13 +251,13 @@ exports.updateTaskActiveStatus = function (userId, taskId, active) {
             } else {
                 if (active == 1) {
                     deactivateUserTask(userId, taskId).then(() => {
-                        resolve("success");
+                        resolve(userId);
                     }).catch((err) => {
                         console.log(err);
                         reject(err);
                     });
                 } else {
-                    resolve();
+                    resolve(userId);
                 }
             }
 
@@ -265,6 +265,23 @@ exports.updateTaskActiveStatus = function (userId, taskId, active) {
     });
 }
 
+exports.getUserActiveTask = function (userId) {
+    return new Promise((resolve, reject) => {
+        var sql = 'SELECT t.id as tid, t.description FROM tasks as t, assignments as a WHERE t.id = a.task AND a.active = 1 AND a.user = ?  ';
+        db.all(sql, [userId], (err, row) => {
+            if (err) {
+                reject(err);
+            } else {
+                if (row.length != 0) {
+                    resolve(row[0]);
+                } else {
+                    resolve({});
+                }
+
+            }
+        });
+    });
+}
 
 
 

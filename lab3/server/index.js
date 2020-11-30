@@ -7,6 +7,62 @@ var jwt = require('express-jwt');
 var fs = require("fs");
 var { Validator, ValidationError } = require('express-json-validator-middleware');
 
+
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: 5000 });
+
+wss.on('connection', function connection(ws) {
+    try {
+        for (const [key, value] of Object.entries(user_active_map)) {
+            const message = { typeMessage: 'login', ...user_active_map[key] }
+            ws.send(JSON.stringify(message))
+        }
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+const user_active_map = {};
+
+module.exports.addNewUser = (user) => {
+    console.log(user_active_map);
+    user_active_map[user.userId] = user;
+    wss.clients.forEach((client) => {
+        try {
+            const message = { typeMessage: 'login', ...user_active_map[user.userId] }
+            client.send(JSON.stringify(message))
+        } catch (err) {
+            console.log(err);
+        }
+    });
+}
+
+module.exports.removeUser = (user) => {
+    delete user_active_map[user.id];
+    console.log(user_active_map);
+    wss.clients.forEach((client) => {
+        try {
+            const message = { typeMessage: 'logout', userId: user.id }
+            client.send(JSON.stringify(message))
+        } catch (err) {
+            console.log(err);
+        }
+    });
+}
+
+module.exports.updateActiveSatus = (user) => {
+    user_active_map[user.userId] = {...user, userName: user_active_map[user.userId].userName};
+    wss.clients.forEach((client) => {
+        try {
+            const message = { typeMessage: 'update', ...user_active_map[user.userId] }
+            console.log(message)
+            client.send(JSON.stringify(message))
+        } catch (err) {
+            console.log(err);
+        }
+    });
+}
+
 var oas3Tools = require('oas3-tools');
 var serverPort = 3000;
 
@@ -61,13 +117,13 @@ app.put('/api/tasks/:taskId/:active', taskController.updateTaskActiveStatus)
 
 // Error handlers for validation and authentication errors
 
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
     if (err instanceof ValidationError) {
         res.status(400).send(err);
     } else next(err);
 });
 
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
     if (err.name === 'UnauthorizedError') {
         res.status(401).json(authErrorObj);
     } else next(err);
@@ -75,7 +131,7 @@ app.use(function(err, req, res, next) {
 
 
 // Initialize the Swagger middleware
-http.createServer(app).listen(serverPort, function() {
+http.createServer(app).listen(serverPort, function () {
     console.log('Your server is listening on port %d (http://localhost:%d)', serverPort, serverPort);
     console.log('Swagger-ui is available on http://localhost:%d/docs', serverPort);
 });
