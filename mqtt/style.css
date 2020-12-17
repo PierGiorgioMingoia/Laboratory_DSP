@@ -1,0 +1,10 @@
+pre {
+    height: 200px;
+    width: 80%;
+    background-color: lightblue;
+    overflow: scroll;
+}
+
+textarea {
+    width: 80%;
+}
